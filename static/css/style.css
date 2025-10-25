@@ -1,0 +1,117 @@
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+header h1 {
+    color: white;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+header p {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    border-bottom: 2px solid #667eea;
+    font-weight: 600;
+}
+
+.best-deal-row {
+    background-color: #d4edda !important;
+    font-weight: bold;
+}
+
+.best-deal-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.not-available {
+    color: #dc3545;
+}
+
+.available {
+    color: #28a745;
+}
+
+footer {
+    color: rgba(255,255,255,0.8);
+}
+
+footer p {
+    margin: 5px 0;
+}
+
+.platform-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.badge-zepto {
+    background-color: #8B4789;
+    color: white;
+}
+
+.badge-blinkit {
+    background-color: #F8CB45;
+    color: #333;
+}
+
+.badge-bigbasket {
+    background-color: #84C225;
+    color: white;
+}
+
+.badge-jiomart {
+    background-color: #0066CC;
+    color: white;
+}
+
+.badge-swiggy {
+    background-color: #FC8019;
+    color: white;
+}
