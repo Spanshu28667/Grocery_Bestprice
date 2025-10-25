@@ -18,6 +18,7 @@ A Python-based web application that compares product prices across multiple groc
 - 🛡️ Graceful error handling for blocked or unavailable platforms
 - 🌐 Simple web interface accessible through your browser
 - 💻 Runs completely offline on your local machine
+- 🎭 **Demo Mode** - Shows sample data to demonstrate functionality (enabled by default)
 
 ## Installation & Setup
 
@@ -74,11 +75,36 @@ A Python-based web application that compares product prices across multiple groc
 4. View the price comparison table showing results from all platforms
 5. The best deal will be highlighted in green
 
+## Demo Mode vs Real Scraping
+
+### Demo Mode (Default)
+The app runs in **Demo Mode** by default, which shows realistic sample data to demonstrate how the price comparison works. This is useful because:
+- Most grocery platforms actively block automated scraping
+- Real scraping requires complex browser automation and location settings
+- You can see how the app looks and feels without dealing with blocking issues
+
+Try searching for: `milk`, `bread`, `maggi`, `butter`, or `rice` to see predefined demo prices.
+
+### Switching to Real Scraping Mode
+To attempt real scraping (not recommended):
+
+1. Open `scrapers.py`
+2. Change `DEMO_MODE = True` to `DEMO_MODE = False`
+3. Restart the app
+
+**Note**: Real scraping will likely fail because:
+- Platforms use JavaScript rendering (needs headless browser)
+- Require location selection before showing products
+- Implement anti-bot verification (Cloudflare, reCAPTCHA, etc.)
+- Block requests without proper cookies/sessions
+- May geo-block or rate-limit automated requests
+
 ## Important Notes
 
 ⚠️ **Web Scraping Limitations**:
 - Most of these platforms use anti-scraping measures and dynamic JavaScript rendering
-- Some platforms may block automated requests
+- Platforms require location selection, login, and cookies before showing prices
+- Real scraping would require Selenium/Playwright with headless browser automation
 - The app handles these cases gracefully by showing "Not Available" status
 - Results may be limited or unavailable depending on platform restrictions
 

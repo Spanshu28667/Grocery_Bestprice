@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from scrapers import scrape_all_platforms
+from scrapers import scrape_all_platforms, DEMO_MODE
 import os
 
 app = Flask(__name__)
@@ -7,7 +7,7 @@ app.secret_key = os.getenv('SESSION_SECRET', 'dev-secret-key-change-in-productio
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', demo_mode=DEMO_MODE)
 
 @app.route('/search', methods=['POST'])
 def search():

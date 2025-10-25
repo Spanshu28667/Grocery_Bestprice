@@ -38,11 +38,14 @@ A Python Flask web application that compares grocery product prices across 5 maj
 
 ## Important Notes
 
-### Web Scraping Challenges
+### Web Scraping Challenges & Demo Mode Solution
 - Most platforms use JavaScript rendering and anti-scraping measures
-- Success rate may be low due to platform restrictions
-- App handles failures gracefully with error messages
-- Future enhancement: Consider using Selenium for JavaScript-heavy sites
+- Platforms require location selection, cookies, and often login before showing prices
+- Success rate for real scraping is near-zero without browser automation
+- **Solution**: Implemented DEMO_MODE (enabled by default) that shows realistic sample data
+- Demo mode allows users to understand the app's functionality and UI without hitting platform blocks
+- Real scraping can be attempted by setting `DEMO_MODE = False` in scrapers.py
+- Future enhancement: Implement Selenium/Playwright with headless Chrome for real scraping
 
 ### Local Development
 - App runs on `0.0.0.0:5000` for Replit compatibility
@@ -51,12 +54,16 @@ A Python Flask web application that compares grocery product prices across 5 maj
 
 ## Recent Changes
 
-### 2025-10-25: Initial Implementation
+### 2025-10-25: Initial Implementation + Demo Mode
 - Created Flask app with search endpoint
 - Implemented scrapers for all 5 platforms
 - Built responsive web UI with Bootstrap 5
 - Added error handling and best deal detection
-- Generated documentation (README.md)
+- **Added Demo Mode**: Shows realistic sample data by default because real scraping fails due to anti-bot measures
+- Demo mode demonstrates full functionality without hitting platform restrictions
+- Updated UI to show demo mode banner and instructions
+- Improved error messages to explain platform blocking issues
+- Generated comprehensive documentation (README.md)
 
 ## User Preferences
 - User wants local execution (not cloud hosting)
