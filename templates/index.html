@@ -1,95 +1,94 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grocery Price Comparison</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <header class="text-center my-5">
-            <h1 class="display-4">🛒 Grocery Price Comparison</h1>
-            <p class="lead text-muted">Compare prices across Zepto, Blinkit, BigBasket, JioMart & Swiggy Instamart</p>
-            {% if demo_mode %}
-            <div class="alert alert-info mt-3" role="alert">
-                <strong>📌 Demo Mode Active</strong> - Showing sample data to demonstrate functionality. 
-                Most grocery platforms block automated scraping. To try real scraping, set <code>DEMO_MODE = False</code> in <code>scrapers.py</code> 
-                (note: real scraping may fail due to anti-bot measures).
-            </div>
-            {% endif %}
-        </header>
+document.addEventListener("DOMContentLoaded", () => {
+    const searchForm = document.getElementById("searchForm");
+    const productInput = document.getElementById("productName");
+    const resultsSection = document.getElementById("resultsSection");
+    const resultsTableBody = document.getElementById("resultsTableBody");
+    const queryText = document.getElementById("queryText");
+    const bestDealSection = document.getElementById("bestDealSection");
+    const bestDealText = document.getElementById("bestDealText");
+    const errorSection = document.getElementById("errorSection");
+    const errorText = document.getElementById("errorText");
+    const searchBtnText = document.getElementById("searchBtnText");
+    const searchBtnSpinner = document.getElementById("searchBtnSpinner");
 
-        <div class="row justify-content-center mb-5">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <form id="searchForm">
-                            <div class="mb-3">
-                                <label for="productName" class="form-label fw-bold">Product Name</label>
-                                <input 
-                                    type="text" 
-                                    class="form-control form-control-lg" 
-                                    id="productName" 
-                                    placeholder="e.g., Amul milk 1L, Maggi noodles, etc."
-                                    required
-                                >
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-lg w-100" id="searchBtn">
-                                <span id="searchBtnText">🔍 Search Prices</span>
-                                <span id="searchBtnSpinner" class="d-none">
-                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    Searching...
-                                </span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    searchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const product = productInput.value.trim();
+        if (!product) return;
 
-        <div id="resultsSection" class="d-none">
-            <div class="card shadow mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">📊 Price Comparison Results</h5>
-                </div>
-                <div class="card-body">
-                    <h6 class="text-muted mb-3">Searching for: <span id="queryText" class="fw-bold"></span></h6>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Platform</th>
-                                    <th>Product Name</th>
-                                    <th>Price</th>
-                                    <th>Status</th>
-                                    <th>Link</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultsTableBody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        // Show spinner
+        searchBtnText.classList.add("d-none");
+        searchBtnSpinner.classList.remove("d-none");
 
-            <div id="bestDealSection" class="d-none">
-                <div class="alert alert-success shadow" role="alert">
-                    <h5 class="alert-heading">🎉 Best Deal Found!</h5>
-                    <p class="mb-0" id="bestDealText"></p>
-                </div>
-            </div>
-        </div>
+        resultsSection.classList.add("d-none");
+        errorSection.classList.add("d-none");
+        bestDealSection.classList.add("d-none");
 
-        <div id="errorSection" class="alert alert-danger shadow d-none" role="alert">
-            <h5 class="alert-heading">⚠️ Error</h5>
-            <p class="mb-0" id="errorText"></p>
-        </div>
+        try {
+            const res = await fetch(`/search?q=${encodeURIComponent(product)}`);
+            const data = await res.json();
 
-          <footer class="text-center text-muted my-5">
+            // Check for error from backend
+            if (data.error) {
+                throw new Error(data.error);
+            }
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-</body>
-</html>
+            // Populate results table
+            resultsTableBody.innerHTML = "";
+            queryText.textContent = product;
+
+            let bestPrice = Infinity;
+            let bestPlatform = "";
+
+            data.platforms.forEach(p => {
+                const row = document.createElement("tr");
+
+                const platformCell = document.createElement("td");
+                platformCell.textContent = p.platform;
+
+                const nameCell = document.createElement("td");
+                nameCell.textContent = p.product_name;
+
+                const priceCell = document.createElement("td");
+                priceCell.textContent = p.price;
+
+                const statusCell = document.createElement("td");
+                statusCell.textContent = p.available ? "✅ Available" : "❌ Not Found";
+
+                const linkCell = document.createElement("td");
+                const link = document.createElement("a");
+                link.href = p.url;
+                link.target = "_blank";
+                link.textContent = "🔗 View";
+                linkCell.appendChild(link);
+
+                row.append(platformCell, nameCell, priceCell, statusCell, linkCell);
+                resultsTableBody.appendChild(row);
+
+                // Track best deal
+                if (p.available && p.price !== 'N/A') {
+                    let priceValue = parseFloat(p.price.replace('₹','').replace(',','').trim());
+                    if (!isNaN(priceValue) && priceValue < bestPrice) {
+                        bestPrice = priceValue;
+                        bestPlatform = p.platform;
+                    }
+                }
+            });
+
+            resultsSection.classList.remove("d-none");
+
+            if (bestPlatform) {
+                bestDealText.textContent = `${bestPlatform} has the lowest price of ₹${bestPrice}`;
+                bestDealSection.classList.remove("d-none");
+            }
+
+        } catch (err) {
+            errorText.textContent = err.message || "Something went wrong!";
+            errorSection.classList.remove("d-none");
+        } finally {
+            // Hide spinner
+            searchBtnText.classList.remove("d-none");
+            searchBtnSpinner.classList.add("d-none");
+        }
+    });
+});
