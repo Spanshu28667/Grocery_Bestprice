@@ -15,7 +15,7 @@ HEADERS = {
     'Upgrade-Insecure-Requests': '1'
 }
 
-DEMO_MODE = True
+DEMO_MODE = False
 
 def get_demo_data(platform: str, product_name: str) -> Dict:
     product_lower = product_name.lower()
