@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import time
 from typing import Dict, Optional
 import random
+import os
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
@@ -15,7 +16,8 @@ HEADERS = {
     'Upgrade-Insecure-Requests': '1'
 }
 
-DEMO_MODE = False
+# Toggle demo mode here or via environment variable
+DEMO_MODE = os.getenv("DEMO_MODE", "False").lower() in ("1", "true", "yes")
 
 def get_demo_data(platform: str, product_name: str) -> Dict:
     product_lower = product_name.lower()
@@ -274,32 +276,176 @@ def scrape_swiggy_instamart(product_name: str) -> Dict:
             'url': ''
         }
 
+# --- New function: get_prices_api ---
+def _normalize_price_str(price_raw: Optional[str]) -> Optional[str]:
+    if not price_raw:
+        return None
+    s = str(price_raw).strip()
+    # If price is numeric or contains currency symbol keep as-is (trim extra words)
+    # e.g. "₹ 65", "65.00", "INR 65"
+    # Return trimmed string
+    return s
+
+def get_prices_api(product: str) -> Dict[str, Optional[str]]:
+    """
+    Try to fetch live prices via configured APIs. Returns a mapping {store_name: price_str}.
+    Providers supported:
+      - SerpAPI (preferred) when SERPAPI_API_KEY in env
+      - RapidAPI-style provider when RAPIDAPI_HOST and RAPIDAPI_KEY in env (you must set endpoint specifics)
+    If no API keys are present, returns empty dict.
+    """
+    product = product.strip()
+    results: Dict[str, Optional[str]] = {}
+
+    # 1) Try SerpAPI if configured
+    serpapi_key = os.getenv("SERPAPI_API_KEY")
+    if serpapi_key:
+        try:
+            params = {
+                "engine": "google_shopping",
+                "q": product,
+                "google_domain": "google.co.in",
+                "hl": "en",
+                "gl": "in",
+                "api_key": serpapi_key,
+            }
+            resp = requests.get("https://serpapi.com/search.json", params=params, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                shopping_results = data.get("shopping_results") or []
+                # serpapi shopping_results: items with keys like title, source (merchant), price, price_raw
+                for item in shopping_results:
+                    source = item.get("source") or item.get("merchant") or item.get("store") or item.get("title") or "unknown"
+                    price = item.get("price") or item.get("price_raw") or item.get("extracted_price")
+                    if price:
+                        results[source] = _normalize_price_str(price)
+                # Map common names to our platforms (best-effort)
+                mapped = {}
+                platform_aliases = {
+                    "Zepto": ["zepto"],
+                    "Blinkit": ["blinkit", "grofers"],  # Grofers alias
+                    "BigBasket": ["bigbasket", "big basket", "bbnow"],
+                    "JioMart": ["jiomart", "jio mart"],
+                    "Swiggy Instamart": ["swiggy", "instamart", "swiggy instamart"],
+                }
+                for plat, aliases in platform_aliases.items():
+                    for k, v in results.items():
+                        kl = k.lower()
+                        if any(alias in kl for alias in aliases):
+                            mapped[plat] = v
+                            break
+                # Also include any other stores found
+                for k, v in results.items():
+                    if k not in mapped.values():
+                        # only include if not already mapped to an official platform
+                        if k not in mapped:
+                            mapped[k] = v
+                return mapped
+            else:
+                # Non-200 from serpapi
+                return {}
+        except Exception:
+            # Any error -> fallthrough to rapidapi or return empty
+            pass
+
+    # 2) Try RapidAPI (generic) if configured
+    rapidapi_key = os.getenv("RAPIDAPI_KEY")
+    rapidapi_host = os.getenv("RAPIDAPI_HOST")
+    if rapidapi_key and rapidapi_host:
+        try:
+            # NOTE: You must set RAPIDAPI_HOST to the actual host your RapidAPI provider requires,
+            # and the path below to the provider's endpoint. This is a template showing how to call.
+            url = f"https://{rapidapi_host}/search"
+            headers = {
+                "X-RapidAPI-Key": rapidapi_key,
+                "X-RapidAPI-Host": rapidapi_host,
+                "Accept": "application/json"
+            }
+            params = {"q": product}
+            resp = requests.get(url, headers=headers, params=params, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                # The parsing below is provider-specific. Adapt to the actual RapidAPI response schema.
+                items = data.get("items") or data.get("results") or []
+                for item in items:
+                    source = item.get("store") or item.get("merchant") or item.get("source") or item.get("title")
+                    price = item.get("price") or item.get("priceString") or item.get("displayPrice")
+                    if source and price:
+                        results[source] = _normalize_price_str(price)
+                return results
+            else:
+                return {}
+        except Exception:
+            pass
+
+    # No API credentials or nothing found
+    return {}
+
 def scrape_all_platforms(product_name: str) -> Dict:
+    """
+    Backwards-compatible wrapper that uses DEMO_MODE or falls back to per-platform scrapers.
+    The front-end expects the shape: { 'query': product_name, 'platforms': [ {platform, price, ...}, ... ] }
+    """
     results = {
         'query': product_name,
         'platforms': []
     }
     
-    scrapers = [
-        scrape_zepto,
-        scrape_blinkit,
-        scrape_bigbasket,
-        scrape_jiomart,
-        scrape_swiggy_instamart
-    ]
+    # If demo mode, use the existing per-platform demo scrapers
+    if DEMO_MODE:
+        scrapers = [
+            scrape_zepto,
+            scrape_blinkit,
+            scrape_bigbasket,
+            scrape_jiomart,
+            scrape_swiggy_instamart
+        ]
+        for scraper in scrapers:
+            result = scraper(product_name)
+            results['platforms'].append(result)
+            time.sleep(0.5)
+    else:
+        # Try to get prices via APIs first
+        api_prices = get_prices_api(product_name)  # mapping store -> price_str
+        # Known platforms we want to show in the UI
+        known_platforms = [
+            ('Zepto', f"https://www.zeptonow.com/search?query={product_name.replace(' ', '%20')}"),
+            ('Blinkit', f"https://blinkit.com/s/?q={product_name.replace(' ', '%20')}"),
+            ('BigBasket', f"https://www.bigbasket.com/ps/?q={product_name.replace(' ', '%20')}"),
+            ('JioMart', f"https://www.jiomart.com/search/{product_name.replace(' ', '%20')}"),
+            ('Swiggy Instamart', f"https://www.swiggy.com/instamart/search?query={product_name.replace(' ', '%20')}")
+        ]
+        for plat_name, plat_url in known_platforms:
+            price_val = None
+            # try direct match from API keys
+            for k, v in api_prices.items():
+                if k and plat_name.lower().split()[0] in k.lower():
+                    price_val = v
+                    break
+            # fallback: sometimes API keys use slightly different names
+            if not price_val:
+                # exact key
+                if plat_name in api_prices:
+                    price_val = api_prices[plat_name]
+            entry = {
+                'platform': plat_name,
+                'price': price_val if price_val else 'N/A',
+                'product_name': product_name,
+                'available': bool(price_val),
+                'url': plat_url
+            }
+            results['platforms'].append(entry)
+            # small delay to be polite (though APIs shouldn't require this)
+            time.sleep(0.1)
     
-    for scraper in scrapers:
-        result = scraper(product_name)
-        results['platforms'].append(result)
-        time.sleep(0.5)
-    
-    available_prices = [p for p in results['platforms'] if p['available'] and p['price'] != 'N/A']
+    # Compute is_best_deal like original logic
+    available_prices = [p for p in results['platforms'] if p.get('available') and p.get('price') != 'N/A']
     
     if available_prices:
         try:
             prices_with_values = []
             for p in available_prices:
-                price_str = p['price'].replace('₹', '').replace(',', '').strip()
+                price_str = str(p['price']).replace('₹', '').replace(',', '').strip()
                 try:
                     price_value = float(price_str.split()[0])
                     prices_with_values.append((p, price_value))
